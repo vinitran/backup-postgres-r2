@@ -1,0 +1,7 @@
+services:
+  backup:
+    build: .
+    container_name: postgres-r2-backup
+    restart: unless-stopped
+    env_file:
+      - .env

@@ -1,0 +1,6 @@
+.env
+.git
+.idea
+.DS_Store
+README.md
+db-backup-r2
