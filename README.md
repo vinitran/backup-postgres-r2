@@ -186,7 +186,7 @@ docker compose logs -f backup
 
 ## CI/CD
 
-GitHub Actions builds the Docker image on pull requests and pushes it to Docker Hub on pushes to `main`, version tags like `v1.0.0`, or manual workflow runs.
+GitHub Actions builds the Docker image on pull requests and pushes it to Docker Hub on pushes to `main`, version tags like `v1.0.0`, or manual workflow runs. Pushes to `main` build `linux/amd64` for speed. Version tags build both `linux/amd64` and `linux/arm64`.
 
 Configure these GitHub repository secrets:
 
