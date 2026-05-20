@@ -183,3 +183,46 @@ Container logs:
 ```sh
 docker compose logs -f backup
 ```
+
+## CI/CD
+
+GitHub Actions builds the Docker image on pull requests and pushes it to Docker Hub on pushes to `main`, version tags like `v1.0.0`, or manual workflow runs.
+
+Configure these GitHub repository secrets:
+
+```text
+DOCKERHUB_USERNAME=<your Docker Hub username>
+DOCKERHUB_TOKEN=<your Docker Hub access token>
+```
+
+Optional GitHub repository variable:
+
+```text
+DOCKERHUB_REPOSITORY=backup-postgres-r2
+```
+
+If `DOCKERHUB_REPOSITORY` is not set, the image name defaults to:
+
+```text
+<DOCKERHUB_USERNAME>/backup-postgres-r2
+```
+
+Published tags include:
+
+```text
+latest
+main
+sha-<git-sha>
+vX.Y.Z
+```
+
+Use the published image in another `docker-compose.yml`:
+
+```yaml
+services:
+  backup:
+    image: your-dockerhub-username/backup-postgres-r2:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+```
