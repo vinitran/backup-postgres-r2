@@ -33,12 +33,12 @@ cp env.example .env
 Fill in all required values:
 
 ```env
-# Postgres
-POSTGRES_HOST=
-POSTGRES_PORT=5432
-POSTGRES_USER=
-POSTGRES_PASSWORD=
-POSTGRES_DB=
+# Database
+DATABASE_HOST=localhost
+DATABASE_PORT=5433
+DATABASE_USER=postgres
+DATABASE_PASSWORD=postgres
+DATABASE_NAME=postgres
 
 # Cloudflare R2
 R2_ACCOUNT_ID=
@@ -156,10 +156,10 @@ aws s3 cp "s3://$R2_BUCKET/postgres/2026/05/20/mydb-20260520T020000Z.dump.gz" ./
 gunzip -c ./backup.dump.gz > ./backup.dump
 
 pg_restore \
-  --host "$POSTGRES_HOST" \
-  --port "$POSTGRES_PORT" \
-  --username "$POSTGRES_USER" \
-  --dbname "$POSTGRES_DB" \
+  --host "$DATABASE_HOST" \
+  --port "$DATABASE_PORT" \
+  --username "$DATABASE_USER" \
+  --dbname "$DATABASE_NAME" \
   --clean \
   --if-exists \
   ./backup.dump

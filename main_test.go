@@ -14,8 +14,8 @@ func TestLoadConfigDefaults(t *testing.T) {
 		t.Fatalf("LoadConfig() error = %v", err)
 	}
 
-	if cfg.PostgresPort != "5432" {
-		t.Fatalf("PostgresPort = %q, want 5432", cfg.PostgresPort)
+	if cfg.DatabasePort != "5432" {
+		t.Fatalf("DatabasePort = %q, want 5432", cfg.DatabasePort)
 	}
 	if cfg.R2Prefix != "postgres" {
 		t.Fatalf("R2Prefix = %q, want postgres", cfg.R2Prefix)
@@ -48,7 +48,7 @@ func TestLoadConfigRejectsInvalidCompression(t *testing.T) {
 
 func TestObjectKeyUsesUTCFoldersAndSanitizedDatabase(t *testing.T) {
 	cfg := Config{
-		PostgresDB:        "my db",
+		DatabaseName:      "my db",
 		R2Prefix:          "postgres",
 		BackupCompression: compressionGzip,
 	}
@@ -63,7 +63,7 @@ func TestObjectKeyUsesUTCFoldersAndSanitizedDatabase(t *testing.T) {
 
 func TestObjectKeySupportsZstd(t *testing.T) {
 	cfg := Config{
-		PostgresDB:        "mydb",
+		DatabaseName:      "mydb",
 		R2Prefix:          "custom",
 		BackupCompression: compressionZstd,
 	}
@@ -88,14 +88,14 @@ func TestLoadDotEnvDoesNotOverrideExistingEnv(t *testing.T) {
 		}
 	})
 
-	if err := os.WriteFile(tempDir+"/.env", []byte("POSTGRES_HOST=from-file\nR2_BUCKET=from-file\n"), 0600); err != nil {
+	if err := os.WriteFile(tempDir+"/.env", []byte("DATABASE_HOST=from-file\nR2_BUCKET=from-file\n"), 0600); err != nil {
 		t.Fatalf("os.WriteFile(.env) error = %v", err)
 	}
 	if err := os.Chdir(tempDir); err != nil {
 		t.Fatalf("os.Chdir(%q) error = %v", tempDir, err)
 	}
 
-	t.Setenv("POSTGRES_HOST", "from-env")
+	t.Setenv("DATABASE_HOST", "from-env")
 	t.Setenv("R2_BUCKET", "")
 	if err := os.Unsetenv("R2_BUCKET"); err != nil {
 		t.Fatalf("os.Unsetenv(R2_BUCKET) error = %v", err)
@@ -105,8 +105,8 @@ func TestLoadDotEnvDoesNotOverrideExistingEnv(t *testing.T) {
 		t.Fatalf("loadDotEnv() error = %v", err)
 	}
 
-	if got := os.Getenv("POSTGRES_HOST"); got != "from-env" {
-		t.Fatalf("POSTGRES_HOST = %q, want from-env", got)
+	if got := os.Getenv("DATABASE_HOST"); got != "from-env" {
+		t.Fatalf("DATABASE_HOST = %q, want from-env", got)
 	}
 	if got := os.Getenv("R2_BUCKET"); got != "from-file" {
 		t.Fatalf("R2_BUCKET = %q, want from-file", got)
@@ -116,10 +116,10 @@ func TestLoadDotEnvDoesNotOverrideExistingEnv(t *testing.T) {
 func setRequiredEnv(t *testing.T) {
 	t.Helper()
 
-	t.Setenv("POSTGRES_HOST", "localhost")
-	t.Setenv("POSTGRES_USER", "postgres")
-	t.Setenv("POSTGRES_PASSWORD", "secret")
-	t.Setenv("POSTGRES_DB", "app")
+	t.Setenv("DATABASE_HOST", "localhost")
+	t.Setenv("DATABASE_USER", "postgres")
+	t.Setenv("DATABASE_PASSWORD", "secret")
+	t.Setenv("DATABASE_NAME", "app")
 	t.Setenv("R2_ACCOUNT_ID", "account")
 	t.Setenv("R2_ACCESS_KEY_ID", "access-key")
 	t.Setenv("R2_SECRET_ACCESS_KEY", "secret-key")

@@ -30,11 +30,11 @@ const (
 )
 
 type Config struct {
-	PostgresHost     string
-	PostgresPort     string
-	PostgresUser     string
-	PostgresPassword string
-	PostgresDB       string
+	DatabaseHost     string
+	DatabasePort     string
+	DatabaseUser     string
+	DatabasePassword string
+	DatabaseName     string
 
 	R2AccountID       string
 	R2AccessKeyID     string
@@ -112,11 +112,11 @@ func loadDotEnv() error {
 
 func LoadConfig() (Config, error) {
 	cfg := Config{
-		PostgresHost:        os.Getenv("POSTGRES_HOST"),
-		PostgresPort:        envDefault("POSTGRES_PORT", "5432"),
-		PostgresUser:        os.Getenv("POSTGRES_USER"),
-		PostgresPassword:    os.Getenv("POSTGRES_PASSWORD"),
-		PostgresDB:          os.Getenv("POSTGRES_DB"),
+		DatabaseHost:        envFirst("DATABASE_HOST", "POSTGRES_HOST"),
+		DatabasePort:        envFirstDefault("5432", "DATABASE_PORT", "POSTGRES_PORT"),
+		DatabaseUser:        envFirst("DATABASE_USER", "POSTGRES_USER"),
+		DatabasePassword:    envFirst("DATABASE_PASSWORD", "POSTGRES_PASSWORD"),
+		DatabaseName:        envFirst("DATABASE_NAME", "POSTGRES_DB"),
 		R2AccountID:         os.Getenv("R2_ACCOUNT_ID"),
 		R2AccessKeyID:       os.Getenv("R2_ACCESS_KEY_ID"),
 		R2SecretAccessKey:   os.Getenv("R2_SECRET_ACCESS_KEY"),
@@ -132,10 +132,10 @@ func LoadConfig() (Config, error) {
 		name  string
 		value string
 	}{
-		{"POSTGRES_HOST", cfg.PostgresHost},
-		{"POSTGRES_USER", cfg.PostgresUser},
-		{"POSTGRES_PASSWORD", cfg.PostgresPassword},
-		{"POSTGRES_DB", cfg.PostgresDB},
+		{"DATABASE_HOST", cfg.DatabaseHost},
+		{"DATABASE_USER", cfg.DatabaseUser},
+		{"DATABASE_PASSWORD", cfg.DatabasePassword},
+		{"DATABASE_NAME", cfg.DatabaseName},
 		{"R2_ACCOUNT_ID", cfg.R2AccountID},
 		{"R2_ACCESS_KEY_ID", cfg.R2AccessKeyID},
 		{"R2_SECRET_ACCESS_KEY", cfg.R2SecretAccessKey},
@@ -147,7 +147,7 @@ func LoadConfig() (Config, error) {
 		}
 	}
 
-	if _, err := parsePort(cfg.PostgresPort); err != nil {
+	if _, err := parsePort(cfg.DatabasePort); err != nil {
 		return Config{}, err
 	}
 
@@ -200,7 +200,7 @@ func NewBackupService(ctx context.Context, cfg Config) (*BackupService, error) {
 func (b *BackupService) Run(ctx context.Context, now time.Time) error {
 	objectKey := b.cfg.ObjectKey(now)
 	endpoint := fmt.Sprintf("https://%s.r2.cloudflarestorage.com", b.cfg.R2AccountID)
-	logInfo("Starting PostgreSQL backup for database %q on %s:%s", b.cfg.PostgresDB, b.cfg.PostgresHost, b.cfg.PostgresPort)
+	logInfo("Starting PostgreSQL backup for database %q on %s:%s", b.cfg.DatabaseName, b.cfg.DatabaseHost, b.cfg.DatabasePort)
 
 	backupFile, size, cleanup, err := b.createCompressedDumpFile(ctx)
 	if err != nil {
@@ -248,7 +248,7 @@ func (b *BackupService) createCompressedDumpFile(ctx context.Context) (string, i
 	if b.cfg.BackupCompression == compressionZstd {
 		extension = "dump.zst"
 	}
-	backupFile := fmt.Sprintf("%s/%s-%s.%s", tempDir, sanitizeName(b.cfg.PostgresDB), time.Now().UTC().Format("20060102T150405Z"), extension)
+	backupFile := fmt.Sprintf("%s/%s-%s.%s", tempDir, sanitizeName(b.cfg.DatabaseName), time.Now().UTC().Format("20060102T150405Z"), extension)
 
 	file, err := os.Create(backupFile)
 	if err != nil {
@@ -284,15 +284,15 @@ func (b *BackupService) streamCompressedDump(ctx context.Context, output io.Writ
 	cmd := exec.CommandContext(
 		ctx,
 		"pg_dump",
-		"--host", b.cfg.PostgresHost,
-		"--port", b.cfg.PostgresPort,
-		"--username", b.cfg.PostgresUser,
-		"--dbname", b.cfg.PostgresDB,
+		"--host", b.cfg.DatabaseHost,
+		"--port", b.cfg.DatabasePort,
+		"--username", b.cfg.DatabaseUser,
+		"--dbname", b.cfg.DatabaseName,
 		"--format=custom",
 		"--no-owner",
 		"--no-privileges",
 	)
-	cmd.Env = append(os.Environ(), "PGPASSWORD="+b.cfg.PostgresPassword)
+	cmd.Env = append(os.Environ(), "PGPASSWORD="+b.cfg.DatabasePassword)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -395,7 +395,7 @@ func (cfg Config) ObjectKey(now time.Time) string {
 		"%s/%s/%s-%s.%s",
 		cfg.R2Prefix,
 		utc.Format("2006/01/02"),
-		sanitizeName(cfg.PostgresDB),
+		sanitizeName(cfg.DatabaseName),
 		utc.Format("20060102T150405Z"),
 		extension,
 	)
@@ -407,6 +407,22 @@ func envDefault(name string, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func envFirst(names ...string) string {
+	for _, name := range names {
+		if value := os.Getenv(name); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func envFirstDefault(fallback string, names ...string) string {
+	if value := envFirst(names...); value != "" {
+		return value
+	}
+	return fallback
 }
 
 func normalizePrefix(prefix string) string {
@@ -442,7 +458,7 @@ func sanitizeName(value string) string {
 func parsePort(value string) (int, error) {
 	port, err := strconv.Atoi(value)
 	if err != nil || port < 1 || port > 65535 {
-		return 0, fmt.Errorf("POSTGRES_PORT must be a number between 1 and 65535")
+		return 0, fmt.Errorf("DATABASE_PORT must be a number between 1 and 65535")
 	}
 	return port, nil
 }
